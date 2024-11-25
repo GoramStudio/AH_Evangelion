@@ -4,11 +4,12 @@ import pickle
 
 class Agent:
     def __init__(self, alpha=0.1, gamma=0.9, epsilon=0.1):
-        self.q_table = {}  # Q-table pour stocker les valeurs Q
+        self.q_table = {}
         self.alpha = alpha  # Taux d'apprentissage
         self.gamma = gamma  # Facteur d'actualisation
         self.epsilon = epsilon  # Taux d'exploration
-        self.load()  # Charger la Q-table sauvegardée
+        self.no_click_moves = 0  # Compteur de déplacements sans clic
+        self.load()
 
     def get_state(self):
         # Obtenir la position actuelle de la souris
@@ -18,7 +19,7 @@ class Agent:
     def choose_action(self, state):
         # Stratégie epsilon-greedy
         if state not in self.q_table:
-            self.q_table[state] = {"move": 0, "click": 0}  # Initialiser les actions pour cet état
+            self.q_table[state] = {"move": 0, "click": 0}
 
         if random.random() < self.epsilon:  # Exploration
             return random.choice(["move", "click"])
@@ -26,24 +27,23 @@ class Agent:
             return max(self.q_table[state], key=self.q_table[state].get)
 
     def move_mouse(self):
-        # Déplacer la souris de manière aléatoire
+        # Déplacement aléatoire avec animation fluide
         screen_width, screen_height = pyautogui.size()
         new_x = random.randint(0, screen_width - 1)
         new_y = random.randint(0, screen_height - 1)
-        pyautogui.moveTo(new_x, new_y, duration=0.1)  # Déplacement rapide mais fluide
+        pyautogui.moveTo(new_x, new_y, duration=0.05)  # Déplacement rapide mais fluide
 
     def click(self):
-        # Clic gauche
+        # Réaliser un clic
         pyautogui.click()
 
     def learn(self, state, action, reward, next_state):
-        # Initialiser l'état et le prochain état s'ils n'existent pas
         if state not in self.q_table:
             self.q_table[state] = {"move": 0, "click": 0}
         if next_state not in self.q_table:
             self.q_table[next_state] = {"move": 0, "click": 0}
 
-        # Mise à jour de la Q-table
+        # Mise à jour Q-learning
         max_next_q = max(self.q_table[next_state].values())
         self.q_table[state][action] += self.alpha * (reward + self.gamma * max_next_q - self.q_table[state][action])
 
