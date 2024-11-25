@@ -1,31 +1,26 @@
 import pyautogui
-import random
-import cv2
-import numpy as np
 
 class Environnement:
     def __init__(self):
+        # Récupérer les dimensions de l'écran
         self.screen_width, self.screen_height = pyautogui.size()
-        self.last_position = (self.screen_width // 2, self.screen_height // 2)
-        self.capture = None
-
-    def get_state(self):
-        # Retourne la position actuelle de la souris
-        return pyautogui.position()
 
     def is_round(self, position):
-        # Détection d'un rond (ici, on suppose qu'un rond peut être détecté avec OpenCV)
-        screenshot = pyautogui.screenshot(region=(position[0] - 20, position[1] - 20, 40, 40))
-        screenshot = np.array(screenshot)
-        screenshot = cv2.cvtColor(screenshot, cv2.COLOR_RGB2GRAY)
-
-        # Application d'un filtre pour détecter des cercles
-        circles = cv2.HoughCircles(screenshot, cv2.HOUGH_GRADIENT, dp=1.2, minDist=20, param1=50, param2=30, minRadius=10, maxRadius=20)
-
-        if circles is not None:
-            return True
-        return False
-
-    def reset(self):
-        # Réinitialise la position du curseur à une position centrale
-        pyautogui.moveTo(self.screen_width // 2, self.screen_height // 2, duration=0.1)
+        """
+        Vérifie si un rond est présent autour de la position donnée.
+        :param position: tuple (x, y) - position actuelle de la souris
+        :return: bool - True si un rond est détecté, False sinon
+        """
+        try:
+            # Taille de la région capturée (200x200 autour de la position de la souris)
+            region_size = 200
+            screenshot = pyautogui.screenshot(region=(position[0] - region_size // 2, 
+                                                      position[1] - region_size // 2, 
+                                                      region_size, region_size))
+            screenshot.save("debug_screenshot.png")  # Debug : sauvegarder pour vérification
+            # Chercher une correspondance avec l'image de référence
+            circle_position = pyautogui.locate("circle.png", screenshot)
+            return circle_position is not None
+        except Exception as e:
+            print(f"Erreur de détection d'image : {e}")
+            return False
