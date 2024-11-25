@@ -1,0 +1,6 @@
+gym
+pyautogui
+opencv-python
+stable-baselines3
+tensorflow  # Si tu veux utiliser TensorFlow dans l'environnement
+numpy
