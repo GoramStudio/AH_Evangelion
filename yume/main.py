@@ -1,49 +1,36 @@
-from agent import Agent
 from environ import Environnement
+from agent import Agent
 import time
 
 def run():
-    agent = Agent()
     env = Environnement()
+    agent = Agent()
 
-    for episode in range(1000):  # Nombre d'épisodes
+    print("Démarrage de l'agent.")
+    for step in range(1000):  # Nombre de cycles d'apprentissage
+        # L'agent choisit une action (déplacement de la souris)
         state = agent.get_state()
-        action = agent.choose_action(str(state))
+        action = agent.choose_action(state)
+        agent.perform_action(action)
 
-        if action == "move":
-            agent.move_mouse()
-            agent.no_click_moves += 1  # Incrémenter le compteur de déplacements
-            reward = -0.1  # Petite pénalité pour déplacement
+        # Vérification après chaque clic
+        if env.is_round(agent.get_state()):
+            print(f"Bonus : Rond détecté à l'étape {step}.")
+            agent.reward(1)  # Récompense positive
+        else:
+            print(f"Malus : Pas de rond détecté à l'étape {step}.")
+            agent.reward(-0.5)  # Malus
 
-            # Vérifier si le déplacement est proche d'un rond
-            if env.is_near_round(agent.get_state()):
-                reward += 0.5  # Bonus pour être proche d'un rond
-                print(f"Episode {episode}: Déplacement proche d'un rond ! Récompense: {reward}")
-            else:
-                print(f"Episode {episode}: Déplacement normal. Récompense: {reward}")
+        # Vérification de proximité pour encourager les bons mouvements
+        if env.detect_all_ronds():
+            print(f"Proximité détectée : Encouragement.")
+            agent.reward(0.5)  # Encouragement
 
-            # Appliquer un malus si l'agent ne clique pas après 10 déplacements
-            if agent.no_click_moves > 10:
-                reward -= 1
-                print(f"Episode {episode}: Trop de déplacements sans clic. Malus: -1")
+        # Temps d'attente pour observer les mouvements
+        time.sleep(0.1)  # Ajustez pour accélérer ou ralentir
 
-        elif action == "click":
-            agent.click()
-            agent.no_click_moves = 0  # Réinitialiser le compteur de déplacements
-            if env.is_round(state):
-                reward = 1  # Récompense pour clic sur un rond
-                print(f"Episode {episode}: Clic sur un rond ! Récompense: {reward}")
-            else:
-                reward = -1  # Malus pour clic incorrect
-                print(f"Episode {episode}: Clic incorrect. Malus: {reward}")
-
-        next_state = agent.get_state()
-        agent.learn(str(state), action, reward, str(next_state))
-
-        time.sleep(0.05)  # Pause entre chaque action
-
+    print("Apprentissage terminé. Sauvegarde des données...")
     agent.save()
-    print("Apprentissage sauvegardé.")
 
 if __name__ == "__main__":
     run()

@@ -1,6 +1,6 @@
-import pyautogui
 import cv2
 import numpy as np
+import pyautogui
 
 class Environnement:
     def __init__(self):
@@ -11,26 +11,15 @@ class Environnement:
         Vérifie si un rond est présent autour de la position donnée.
         """
         try:
-            region_size = 200
-            screenshot = pyautogui.screenshot(region=(
-                max(0, position[0] - region_size // 2),  # Empêcher les coordonnées négatives
-                max(0, position[1] - region_size // 2),
-                min(region_size, self.screen_width - position[0]),  # Limiter à l'écran
-                min(region_size, self.screen_height - position[1])
-            ))
-            circle_position = pyautogui.locate("circle.png", screenshot)
-            return circle_position is not None
-        except Exception as e:
-            print(f"Erreur de détection d'image : {e}")
-            return False
+            # Charger le modèle du rond
+            template = cv2.imread("circle.png", cv2.IMREAD_GRAYSCALE)
+            if template is None:
+                raise FileNotFoundError("L'image 'circle.png' est introuvable ou invalide.")
 
-    def is_near_round(self, position, threshold=100):
-        """
-        Vérifie si un rond est proche de la position donnée.
-        """
-        try:
-            region_size = threshold * 2
-            # Vérifie les limites de l'écran pour éviter une erreur de dimension
+            w, h = template.shape[::-1]
+            region_size = 100
+
+            # Définir une région autour de la position
             region = (
                 max(0, position[0] - region_size // 2),
                 max(0, position[1] - region_size // 2),
@@ -38,35 +27,46 @@ class Environnement:
                 min(region_size, self.screen_height - position[1]),
             )
             screenshot = pyautogui.screenshot(region=region)
-            circle_position = pyautogui.locate("circle.png", screenshot)
-            return circle_position is not None
+            screenshot_np = np.array(screenshot)
+            screenshot_gray = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2GRAY)
+
+            # Correspondance avec le modèle
+            res = cv2.matchTemplate(screenshot_gray, template, cv2.TM_CCOEFF_NORMED)
+            loc = np.where(res >= 0.8)  # Correspondances >= 80%
+            loc_list = list(zip(*loc[::-1]))  # Convertir en liste avant d'utiliser len()
+
+            return len(loc_list) > 0
+
         except Exception as e:
-            print(f"Erreur de détection de proximité : {e}")
+            print(f"Erreur de détection d'image : {e}")
             return False
 
-    def detect_and_annotate_ronds(self):
+    def detect_all_ronds(self):
         """
-        Détecte tous les ronds sur l'écran et affiche une superposition.
+        Détecte tous les ronds sur l'écran et retourne leurs positions.
         """
         try:
-            # Capture de l'écran complet
+            # Charger le modèle du rond
+            template = cv2.imread("circle.png", cv2.IMREAD_GRAYSCALE)
+            if template is None:
+                raise FileNotFoundError("L'image 'circle.png' est introuvable ou invalide.")
+
+            w, h = template.shape[::-1]
+
+            # Capture de l'écran
             screenshot = pyautogui.screenshot()
-            screenshot_np = np.array(screenshot)  # Conversion en tableau numpy
-            screenshot_bgr = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2BGR)  # Conversion en BGR pour OpenCV
+            screenshot_np = np.array(screenshot)
+            screenshot_gray = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2GRAY)
 
-            # Détection des ronds (tous les correspondances avec circle.png)
-            detected_positions = list(pyautogui.locateAll("circle.png", screenshot))
+            # Recherche des correspondances
+            res = cv2.matchTemplate(screenshot_gray, template, cv2.TM_CCOEFF_NORMED)
+            threshold = 0.8
+            loc = np.where(res >= threshold)
 
-            # Dessiner des rectangles autour des positions détectées
-            for pos in detected_positions:
-                top_left = (pos.left, pos.top)
-                bottom_right = (pos.left + pos.width, pos.top + pos.height)
-                cv2.rectangle(screenshot_bgr, top_left, bottom_right, (0, 255, 0), 2)
-
-            # Affichage du résultat
-            cv2.imshow("Ronds détectés", screenshot_bgr)
-            cv2.waitKey(0)  # Attendre une touche pour fermer la fenêtre
-            cv2.destroyAllWindows()
+            # Convertir en liste avant de retourner
+            detected_positions = list(zip(*loc[::-1]))
+            return detected_positions
 
         except Exception as e:
             print(f"Erreur lors de la détection des ronds : {e}")
+            return []
